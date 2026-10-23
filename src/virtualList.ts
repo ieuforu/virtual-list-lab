@@ -29,9 +29,7 @@ export class VirtualList {
   private estimatedHeight: number
   private bufferCount: number
 
-  // 位置与绝对偏移缓存 (前缀和数组)
   private positions: ItemPosition[] = []
-  // DOM 节点对象池 (Object Pool)
   private domPool: HTMLElement[] = []
   private resizeObserver: ResizeObserver
 
@@ -57,7 +55,6 @@ export class VirtualList {
     this.render()
   }
 
-  // 1. 初始化前缀和位置信息（以预估高度打底）
   private initPositions() {
     this.positions = new Array(this.data.length)
     for (let i = 0; i < this.data.length; i++) {
@@ -77,10 +74,8 @@ export class VirtualList {
     return totalHeight
   }
 
-  // 2. 初始化 DOM 节点对象池：只创建屏幕能容纳的最大数量节点
   private initDomPool() {
     const viewportHeight = this.viewport.clientHeight || 520
-    // 屏幕容量 + 上下双缓冲数量
     const poolSize = Math.ceil(viewportHeight / this.estimatedHeight) + this.bufferCount * 2
 
     this.contentBox.innerHTML = ''
@@ -89,10 +84,14 @@ export class VirtualList {
     for (let i = 0; i < poolSize; i++) {
       const el = document.createElement('div')
       el.className = 'list-item'
+      el.dataset.slotId = i.toString()
       el.style.display = 'none'
       el.innerHTML = `
         <div class="list-item-header">
-          <span class="item-title"></span>
+          <div>
+            <span class="item-title"></span>
+            <span class="slot-tag">Slot #${i}</span>
+          </div>
           <span class="item-size"></span>
         </div>
         <div class="list-item-desc"></div>
@@ -103,7 +102,6 @@ export class VirtualList {
     }
   }
 
-  // 3. O(log N) 二分查找起始项（寻找第一个 bottom > scrollTop 的元素）
   private findStartIndex(scrollTop: number): number {
     let low = 0
     let high = this.positions.length - 1
@@ -123,7 +121,6 @@ export class VirtualList {
     return low
   }
 
-  // 4. 监听真实尺寸渲染变化，修正前缀和
   private handleResize(entries: ResizeObserverEntry[]) {
     let hasChanged = false
 
@@ -141,7 +138,6 @@ export class VirtualList {
         pos.height = realHeight
         pos.bottom += dVal
 
-        // 级联向后更新所有受影响节点的前缀和偏移量
         for (let j = index + 1; j < this.positions.length; j++) {
           this.positions[j].top += dVal
           this.positions[j].bottom += dVal
@@ -158,16 +154,13 @@ export class VirtualList {
     }
   }
 
-  // 5. 核心渲染工作循环：完全复用池内节点，不触发 DOM 增删
   private render() {
     const scrollTop = this.viewport.scrollTop
     const viewportHeight = this.viewport.clientHeight || 520
 
     let startIndex = this.findStartIndex(scrollTop)
-    // 加入上方缓冲区
     startIndex = Math.max(0, startIndex - this.bufferCount)
 
-    // 寻找可视区结束项并加上下方缓冲区
     let endIndex = startIndex
     const bottomLimit = scrollTop + viewportHeight
 
@@ -177,10 +170,8 @@ export class VirtualList {
     endIndex = Math.min(this.data.length - 1, endIndex + this.bufferCount)
 
     this.lastRenderedRange = [startIndex, endIndex]
-
     const renderCount = endIndex - startIndex + 1
 
-    // 遍历 DOM 节点池复用并挂载数据
     for (let i = 0; i < this.domPool.length; i++) {
       const dom = this.domPool[i]
       const dataIndex = startIndex + i
@@ -189,10 +180,7 @@ export class VirtualList {
         const item = this.data[dataIndex]
         const pos = this.positions[dataIndex]
 
-        // 建立真实数据下标索引映射
         dom.dataset.index = dataIndex.toString()
-
-        // 仅修改 transform 与 textContent，绝不调用 appendChild / removeChild
         dom.style.transform = `translate3d(0, ${pos.top}px, 0)`
         dom.style.display = 'flex'
 
@@ -201,7 +189,7 @@ export class VirtualList {
         const descEl = dom.querySelector('.list-item-desc') as HTMLElement
 
         titleEl.textContent = `#${item.id} ${item.title}`
-        sizeEl.textContent = `高度: ${Math.round(pos.height)}px`
+        sizeEl.textContent = `H: ${Math.round(pos.height)}px (Top: ${Math.round(pos.top)}px)`
         descEl.textContent = item.content
       } else {
         dom.style.display = 'none'

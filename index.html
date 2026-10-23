@@ -29,7 +29,28 @@
         max-width: 680px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 14px;
+      }
+      .header-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .btn-debug {
+        background: #334155;
+        color: #f8fafc;
+        border: 1px solid #475569;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+      .btn-debug.active {
+        background: #0284c7;
+        border-color: #38bdf8;
+        color: white;
       }
       .telemetry {
         display: grid;
@@ -91,6 +112,9 @@
         gap: 6px;
         pointer-events: auto;
         box-sizing: border-box;
+        transition:
+          border 0.15s ease,
+          background 0.15s ease;
       }
       .list-item-header {
         display: flex;
@@ -104,11 +128,44 @@
         line-height: 1.5;
         word-break: break-all;
       }
+      .slot-tag {
+        display: none;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        background: #3b82f6;
+        color: white;
+        margin-left: 8px;
+      }
+
+      /* -------------------------------------------------------------
+         调试透视模式：高亮边框、槽位角标与幽灵容器边框
+         ------------------------------------------------------------- */
+      body.debug-mode #viewport {
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 1px #f59e0b;
+      }
+      body.debug-mode #phantom {
+        outline: 2px dashed rgba(245, 158, 11, 0.25);
+        outline-offset: -2px;
+      }
+      body.debug-mode .list-item {
+        border: 2px solid #38bdf8 !important;
+        background: rgba(15, 23, 42, 0.95);
+        margin: 2px 0;
+      }
+      body.debug-mode .slot-tag {
+        display: inline-block;
+      }
     </style>
   </head>
   <body>
     <div class="panel">
-      <h2>万级不定高动态虚拟滚动（100,000 数据条目）</h2>
+      <div class="header-actions">
+        <h2>万级不定高动态虚拟滚动（100,000 条）</h2>
+        <button id="btn-toggle-debug" class="btn-debug">🔍 开启调试透视模式</button>
+      </div>
+
       <div class="telemetry">
         <div class="telemetry-item">
           <div>总数据量</div>
@@ -123,7 +180,7 @@
           <div id="stat-range">[0, 0]</div>
         </div>
         <div class="telemetry-item">
-          <div>滚动条物理总高</div>
+          <div>撑高层高度 (Phantom)</div>
           <div id="stat-phantom-height">0 px</div>
         </div>
       </div>
